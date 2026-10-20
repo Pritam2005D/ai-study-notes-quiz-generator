@@ -116,8 +116,9 @@ def generate_text(prompt: str, *, schema: dict[str, Any] | None = None) -> str:
         response_mime_type="application/json" if schema else "text/plain",
         response_schema=schema,
     )
-    response = make_client().models.generate_content(model=MODEL_NAME, contents=prompt, config=config)
-    result = response.text
+    with make_client() as client:
+        response = client.models.generate_content(model=MODEL_NAME, contents=prompt, config=config)
+        result = response.text
     if not result or not result.strip():
         raise ValueError("Gemini returned an empty response. Please try again.")
     return result.strip()
