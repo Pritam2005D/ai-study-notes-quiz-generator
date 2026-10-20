@@ -69,6 +69,8 @@ streamlit run app.py
 
 The variable disappears when that terminal closes. For repeat local use, copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`, replace the placeholder with your key, and run `streamlit run app.py`. `secrets.toml` is excluded by `.gitignore`; do not commit it.
 
+If Gemini returns `API_KEY_INVALID`, create a replacement key in [Google AI Studio](https://aistudio.google.com/apikey), update the local secret or Streamlit Cloud app's **Settings → Secrets**, and restart the app. Do not reuse a key that has been shared in chat.
+
 In PowerShell, the copy command is:
 
 ```powershell

@@ -124,6 +124,23 @@ def generate_text(prompt: str, *, schema: dict[str, Any] | None = None) -> str:
     return result.strip()
 
 
+def generation_error_message(error: Exception) -> str:
+    """Turn common Gemini API failures into steps a learner can act on."""
+    detail = str(error)
+    normalized = detail.casefold()
+    if "api_key_invalid" in normalized or "api key not valid" in normalized:
+        return (
+            "Gemini rejected the configured API key. Create a replacement in "
+            "[Google AI Studio](https://aistudio.google.com/apikey), then update "
+            "`GEMINI_API_KEY` in your local `.streamlit/secrets.toml` or your "
+            "Streamlit Cloud app's Settings → Secrets. Restart the app and try again. "
+            "Do not reuse a key that was shared in chat."
+        )
+    if "resource_exhausted" in normalized or "429" in normalized or "quota" in normalized:
+        return "Gemini's quota or rate limit was reached. Check your Google AI Studio project and try again later."
+    return f"Gemini could not complete the request. Check your connection, API key, and model settings, then try again. Details: {detail}"
+
+
 def generate_notes(material: str) -> str:
     prompt = f"""Create faithful study notes using ONLY the source below. Do not add outside facts or infer unsupported details.
 Use clear Markdown headings and concise bullets. Highlight key terms in **bold**. Include important concepts, definitions, and facts, then finish with a heading 'Quick Revision' and a short revision summary.
@@ -261,7 +278,7 @@ with st.sidebar:
     st.markdown("1. Paste notes or upload a PDF/TXT.\n2. Choose Notes, Quiz, or Flashcards.\n3. Generate and save your revision materials.")
     st.divider()
     if get_api_key():
-        st.success("Gemini API key configured")
+        st.info("Gemini API key found; validity is checked when you generate content.")
     else:
         st.warning("Gemini API key not configured")
     st.caption(f"Model: `{MODEL_NAME}`")
@@ -295,7 +312,7 @@ with notes_tab:
             with st.spinner("Turning your material into concise study notes…"):
                 st.session_state["notes"] = generate_notes(material)
         except Exception as exc:
-            st.error(f"Could not generate notes: {exc}")
+            st.error(f"Could not generate notes: {generation_error_message(exc)}")
     if st.session_state.get("notes"):
         st.markdown(st.session_state["notes"])
         st.download_button("Download notes (.md)", st.session_state["notes"], "study_notes.md", "text/markdown")
@@ -319,7 +336,7 @@ with quiz_tab:
             elif not generated:
                 st.warning("The source did not produce valid questions. Try adding more study material.")
         except Exception as exc:
-            st.error(f"Could not generate a quiz: {exc}")
+            st.error(f"Could not generate a quiz: {generation_error_message(exc)}")
 
     questions = st.session_state.get("quiz_questions", [])
     if questions:
@@ -368,7 +385,7 @@ with cards_tab:
             st.session_state["flashcard_index"] = 0
             st.session_state["flashcard_revealed"] = False
         except Exception as exc:
-            st.error(f"Could not generate flashcards: {exc}")
+            st.error(f"Could not generate flashcards: {generation_error_message(exc)}")
     cards = st.session_state.get("flashcards", [])
     if cards:
         index = st.session_state.get("flashcard_index", 0)
